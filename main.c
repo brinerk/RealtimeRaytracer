@@ -1,6 +1,8 @@
 #include <raylib.h>
+#include <rlgl.h>
 #include <raymath.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <math.h>
 #define WIDTH_INTERNAL 1920
 #define HEIGHT_INTERNAL 1080
@@ -20,6 +22,10 @@ typedef struct Sphere {
 	Color color;
 }Sphere;
 
+typedef struct VertexData {
+	Vector3 position;
+} VertexData;
+
 
 int main(void) {
 	//set up the window
@@ -32,11 +38,31 @@ int main(void) {
 	Shader shader = LoadShader(NULL, "shaders/ray.frag");
 	RenderTexture2D target = LoadRenderTexture(WIDTH_INTERNAL, HEIGHT_INTERNAL);
 
-	/*Model grave = LoadModel("obj/grave_B.obj");
+	//load a model and get the verts
+	Model grave = LoadModel("obj/grave_B.obj");
 	Mesh graveMesh = grave.meshes[0];
 	float* graveVerts = graveMesh.vertices;
 	int vertCount = graveMesh.vertexCount;
-	//UnloadModel(grave);*/
+
+	//dynamically allocate our array
+	VertexData* vertices = (VertexData*)calloc(vertCount/3,sizeof(VertexData));
+
+
+	//setup an ssbo
+	unsigned int ssbo = rlLoadShaderBuffer(sizeof(VertexData)*(vertCount/3), NULL, RL_DYNAMIC_COPY);
+	rlBindShaderBuffer(ssbo, 0);
+	
+	//turn our list of points into verts
+	int vi=0;
+	for(int v=0;v<vertCount;v+=3){
+		vertices[vi] = (VertexData){(Vector3){graveVerts[v],graveVerts[v+1], graveVerts[v+2]}};
+		vi++;
+	}
+
+	//update our ssbo with our vert array
+	rlUpdateShaderBuffer(ssbo,vertices,sizeof(VertexData)*(vertCount/3),0);
+
+	printf("%f,%f,%f\n", vertices[0].position.x, vertices[0].position.y, vertices[0].position.z);
 
 	int resolutionLoc = GetShaderLocation(shader, "resolution");
 	int sphereLoc = GetShaderLocation(shader, "sphere_pos");
@@ -73,10 +99,6 @@ int main(void) {
 		Vector2 mouseDelta = GetMouseDelta();
 
 		SetMousePosition(WIDTH/2, HEIGHT/2);
-
-		//spheres[0].x = 7.0f * cos(timeValue - 3.14);
-		//spheres[2].y = -5.0f * cos(2*timeValue + 5);
-		//spheres[2].z = 12.0f * cos(timeValue) - 20;
 
 		float forwardZ = -sin(camera.rotation);
 		float forwardX = cos(camera.rotation);
@@ -133,7 +155,11 @@ int main(void) {
 		EndDrawing();
 	}
 
+	free(vertices);
+
 	UnloadShader(shader);
+	UnloadModel(grave);
+	rlUnloadShaderBuffer(ssbo);
 	CloseWindow();
 	printf("ProgramExiting");
 	return 0;

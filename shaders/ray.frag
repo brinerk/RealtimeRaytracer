@@ -1,4 +1,9 @@
-#version 330 core
+#version 430 core
+
+
+layout(std430, binding=0) buffer VertexBuffer {
+	vec3 verts[];
+};
 
 uniform vec2 resolution;
 
@@ -16,6 +21,8 @@ uniform float rotation;
 uniform float rotationY;
 
 uniform float flashLight;
+
+out vec4 FragColor;
 
 
 struct Sphere {
@@ -51,8 +58,6 @@ struct Object {
 
 Sphere spheres[20];
 Triangle _triangles[10];
-//vec3 _verts[400];
-//Triangle _grave[400];
 
 vec3 color[3] = vec3[3]( 
 	vec3(1.0,.6,.3),
@@ -63,10 +68,12 @@ vec3 light_pos = vec3(1.,5.,-8.);
 
 vec3 background_color = vec3(.35,.45,.9);
 
+//this is not random enough
 float rand(vec2 co) {
 	return fract(sin(dot(co.xy, vec2(12.9898, 78.233)))*43758.5453123);
 }
 
+//this has a name, but I don't remember what
 vec2 rand_norm(vec2 st) {
 	float u1 = rand(st);
 	float u2 = rand(st*2.);
@@ -261,18 +268,6 @@ vec4 tone_map(vec4 color) {
 
 void main() {
 
-
-	/*int vp = 0;
-	for(int p = 0; p<1000; p+=3) {
-		_verts[vp] = vec3(verts[p],verts[p+1],verts[p+2]);
-		vp++;
-	}
-	int t = 0;
-	for(int g=0; g<400; g+=3) {
-		_grave[t] = Triangle(_verts[g],_verts[g+1],_verts[g+2], vec3(1.,.8,.8), 0, 1);
-		t++;
-	}*/
-
 	spheres[0] = Sphere(sphere_pos[0], color[0], 6, 0, -10, 1*cos(u_time/10)+1,0);
 	spheres[1] = Sphere(sphere_pos[1], color[1], radii[1], 0, .9, 1., 1);
 	spheres[2] = Sphere(sphere_pos[2], color[2], radii[2], 0, .9, 1., 2);
@@ -297,10 +292,13 @@ void main() {
 	_triangles[6] = Triangle(vec3(10.,10.,0.), vec3(10.,10.,0.), vec3(10.,-10.,10.),vec3(.1,.8,.8), 0., 0.8);
 	_triangles[7] = Triangle(vec3(10.,10.,0.), vec3(10.,-10.,10.), vec3(10.,-10.,10.),vec3(.1,.8,.8), 0., 0.8);
 	*/
-	_triangles[0] = Triangle(vec3(0.), vec3(22.,-10.,0.), vec3(10.,10,10),vec3(.1,.8,.8), 0., 0.8);
-	_triangles[1] = Triangle(vec3(0.), vec3(10.,-10.,15.), vec3(22,-10,0),vec3(.1,.8,.8), 0., 0.8);
+	_triangles[0] = Triangle(verts[0],verts[1],verts[2],vec3(.1,.8,.8), 0., 1);
+	_triangles[1] = Triangle(verts[3],verts[4],verts[5],vec3(.1,.8,.8), 0., 1);
+	_triangles[2] = Triangle(verts[6],verts[7],verts[8],vec3(.1,.8,.8), 0., 1);
+	_triangles[3] = Triangle(vec3(0.), vec3(22.,-10.,0.), vec3(10.,10,10),vec3(.1,.8,.8), 0., 0.8);
+	_triangles[4] = Triangle(vec3(0.), vec3(10.,-10.,15.), vec3(22,-10,0),vec3(.1,.8,.8), 0., 0.8);
 
 	vec2 st = gl_FragCoord.xy / resolution;
 
-	gl_FragColor = tone_map(trace_ray(camera_pos, world_to_canvas(st, 80.0), 1, 1000, 5, rotation, rotationY, st));
+	FragColor = tone_map(trace_ray(camera_pos, world_to_canvas(st, 80.0), 1, 1000, 5, rotation, rotationY, st));
 }
